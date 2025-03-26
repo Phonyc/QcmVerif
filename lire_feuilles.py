@@ -2,6 +2,8 @@
 import json
 import os
 
+from tqdm import tqdm
+
 import result_extract
 from recal import redresser_image
 
@@ -24,9 +26,10 @@ class Feuille:
 images_paths = os.listdir('input')
 feuilles = []
 for path in images_paths:
-    feuilles.append(Feuille(path))
+    if not path.startswith('.'):
+        feuilles.append(Feuille(path))
 
-for feuille in feuilles:
+for feuille in tqdm(feuilles):
     feuille.compute()
 
 json_out = {}
