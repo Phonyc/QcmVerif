@@ -172,3 +172,13 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+#######
+*.json
+*.csv
+.idea
+
+input/*
+!input/.gitkeep
+red/*
+!red/.gitkeep

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification manuelle</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        #image {
+            max-height: 1000px;
+        }
+
+        .rectangle {
+            position: absolute;
+            cursor: pointer;
+            border: 2px solid green;
+        }
+
+        .rectangle:hover {
+            background: rgba(255, 0, 0, 0.2);
+        }
+
+        .checked {
+            border: 2px solid red;
+            background: rgba(255, 0, 0, 0.2);
+
+        }
+
+        .checked:hover {
+            background: rgba(0, 255, 0, 0.2);
+        }
+
+        #content {
+            display: flex;
+        }
+
+        #right {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+<script>
+    function saveChecked() {
+        const checkedIds = [];
+        const rectangles = document.querySelectorAll('.rectangle');
+
+        rectangles.forEach((rect, index) => {
+            if (rect.classList.contains('checked')) {
+                checkedIds.push(rect.id); // IDs commencent à 1
+            }
+        });
+
+        let num_plaque = parseInt(document.getElementById("numplaque").value);
+        if (!isNaN(num_plaque)) {
+            // alert('Réponses cochés: \n' + checkedIds.join(', '));
+
+
+            fetch('/verif/{{ f_id }}', {
+                method: 'POST', // Méthode de la requête
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({"result": checkedIds, "num": num_plaque})
+            })
+                .then(response => {
+                   window.location.href = '/next/{{ f_id }}';
+                })
+
+                .catch((error) => {
+                    console.error('Error:', error); // Gérer les erreurs
+                });
+        } else {
+            alert("Veuillez remplir un numéro de plaque valide !")
+        }
+
+
+    }
+</script>
+
+<div id="content">
+    <div id="left">
+        <img id="image" src="/image/{{ f_id }}" alt="Image"/>
+        <div id="rects">
+            {% for rect in rectangles %}
+            <div class="rectangle {% if rect[5] %}checked{% endif %}" id="{{ rect[4] }}"
+                 style="left: {{ rect[0] }}px; top: {{ rect[1] }}px; width: {{ rect[2] }}px; height: {{ rect[3] }}px;"
+                 onclick="this.classList.toggle('checked')">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div id="right">
+        <p><label for="numplaque">Numéro de plaque : </label><input id="numplaque" type="text" value="{{ num }}"></p>
+        <button onclick="saveChecked()">Sauvegarder</button>
+    </div>
+</div>
+</body>
+</html>
