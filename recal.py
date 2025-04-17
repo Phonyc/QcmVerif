@@ -38,7 +38,7 @@ def redresser_image(image_path):
 
     # Détection des cercles
     circles = cv2.HoughCircles(image_gray, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
-                               param1=150, param2=50, minRadius=10, maxRadius=50)
+                               param1=150, param2=50, minRadius=20, maxRadius=50)
 
     if circles is not None:
         circles = np.uint16(np.around(circles))
@@ -75,6 +75,7 @@ def redresser_image(image_path):
             # Appliquer la transformation de perspective
             image_redressee = cv2.warpPerspective(image, matrix, (image.shape[1], image.shape[0]))
             cv2.imwrite(f'red/{image_path}', image_redressee)
+            afficher_cercles(image, circles)
             return image_redressee
         else:
             afficher_cercles(image, circles)
