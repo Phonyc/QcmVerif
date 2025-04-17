@@ -1,7 +1,7 @@
 """Calcul des points"""
 import json
 
-n_questions = 7
+n_questions = 5
 points_total = 100
 pts_par_question = round(points_total / n_questions, 2)
 reponses = {
@@ -33,7 +33,7 @@ def calc_point(entrees):
         n_reps = 0
         add_pt = False
         for entree in entrees:
-            if entree.startswith(str(nk)):
+            if entree.startswith(f"{str(nk)}#"):
                 n_reps += 1
                 if entree == f"{nk}#{rep}":
                     add_pt = True
@@ -54,3 +54,5 @@ def export_pts():
         out += f"{np};{calc_point(result)}\n"
     with open("points.csv", "w", encoding="utf-8") as f:
         f.write(out)
+
+# export_pts()

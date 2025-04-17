@@ -104,7 +104,7 @@ def main(image):
     :param image:
     """
     results = []
-    threshold_coche = 0.3
+    threshold_coche = 0.4
 
     rectangles = set_rectangles(image.shape)
     binary_image = get_binary_image(image)
