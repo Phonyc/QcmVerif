@@ -182,3 +182,4 @@ input/*
 !input/.gitkeep
 red/*
 !red/.gitkeep
+user/
