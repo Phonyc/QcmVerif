@@ -5,7 +5,7 @@ import numpy as np
 LETTRES = "ABCDEFGH"
 
 
-def set_rectangles(imshape):
+def set_rectangles(imshape, except_lines=[], except_cols=[]):
     """
         Définir les rectangles des cases réponses
     :param imshape:
@@ -17,10 +17,12 @@ def set_rectangles(imshape):
     decx = round(imshape[1] / 4.41)
     decy = round(imshape[0] / 4.44)
     for nligne in range(0, 22):
-        for ncol in range(0, 8):
-            case_name = f'{nligne + 1}#{LETTRES[ncol]}'
-            rects.append(
-                (round(decx + ncol * wrect), round(decy + hrect * nligne), round(wrect), round(hrect), case_name))
+        if (nligne + 1 not in except_lines):
+            for ncol in range(0, 8):
+                if (ncol + 1 not in except_cols):
+                    case_name = f'{nligne + 1}#{LETTRES[ncol]}'
+                    rects.append(
+                        (round(decx + ncol * wrect), round(decy + hrect * nligne), round(wrect), round(hrect), case_name))
     return rects
 
 
@@ -58,7 +60,8 @@ def get_binary_image(intial_image):
     :return:
     """
     gray_image = cv2.cvtColor(intial_image, cv2.COLOR_BGR2GRAY)
-    _, temp_bin_img = cv2.threshold(gray_image, threshold_bin(gray_image), 255, cv2.THRESH_BINARY)
+    _, temp_bin_img = cv2.threshold(
+        gray_image, threshold_bin(gray_image), 255, cv2.THRESH_BINARY)
     kernel = np.ones((3, 3), np.uint8)
     return cv2.bitwise_not(cv2.erode(temp_bin_img, kernel, iterations=2))
 
@@ -98,7 +101,7 @@ def draw_results(image, results):
 #     cv2.waitKey(0)
 #     plaque_content = image[y:y + height, x:x + width]
 
-def main(image):
+def main(image, except_lines=[], except_cols=[]):
     """
         Détecter les réponses cochées
     :param image:
@@ -106,15 +109,17 @@ def main(image):
     results = []
     threshold_coche = 0.4
 
-    rectangles = set_rectangles(image.shape)
+    rectangles = set_rectangles(image.shape, except_lines=except_lines, except_cols=except_cols)
     binary_image = get_binary_image(image)
     # detect_plaque(image)
     for i, (x, y, width, height, name) in enumerate(rectangles):
         rectangle_content = binary_image[y:y + height, x:x + width]
 
-        percentage_filled = cv2.countNonZero(rectangle_content) / (width * height)
+        percentage_filled = cv2.countNonZero(
+            rectangle_content) / (width * height)
 
-        results.append((x, y, width, height, name, percentage_filled > threshold_coche))
+        results.append((x, y, width, height, name,
+                       percentage_filled > threshold_coche))
 
     draw_results(image, results)
     # cv2.imshow('Image', image)

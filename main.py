@@ -14,6 +14,8 @@ class Qcm:
         self.folder = config["folder"]
         self.name = config["name"]
         self.reponses = config["reponses"]
+        self.except_lines = config["excl_lines"]
+        self.except_cols = config["excl_cols"]
         self.pts_par_question = round(config["points_total"] / len(list(self.reponses.keys())), 2)
         self.images_paths = os.listdir(f'{self.folder}/input')
         self.redresseur = Redresseur(self.folder)
@@ -95,7 +97,8 @@ class Qcm:
                 if extension.lower() in IMAGES_EXTS:
                     if path not in self.data_extract:
                         self.data_extract[path] = result_extract.main(
-                            self.redresseur.redresser_image(path))
+                            self.redresseur.redresser_image(path),
+                            except_lines=self.except_lines, except_cols=self.except_cols)
 
     def single_calc_point(self, entrees):
         points = 0
