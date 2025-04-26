@@ -1,9 +1,10 @@
 import os
 import sys
-
+import csv
 import dotenv
 import requests
-
+from datetime import datetime, timezone
+from tqdm import tqdm
 dotenv.load_dotenv()
 url = "https://bikechallenge.ffvelo.fr"
 
@@ -26,7 +27,7 @@ class Getter:
         :param route:
         :return:
         """
-        print("get", route)
+        # print("get", route)
         response = requests.get(self.base_url + route,
                                 headers={"Content-Type": "application/ld+json",
                                          "accept": "application/ld+json",
@@ -59,17 +60,14 @@ class Getter:
         :param uname:
         :param pwd:
         """
-        print("get Token")
         if token == '':
             response = requests.post(self.base_url + "/api/auth", json={"username": uname, "password": pwd},
                                      headers={"Content-Type": "application/ld+json",
                                               "accept": "application/ld+json"})
 
-            print(response.json())
             self.token = response.json()["token"]
         else:
             self.token = token
-        print("fin token")
 
 
 class Interface:
@@ -82,6 +80,8 @@ class Interface:
         self.event_choisi = {}
         self.epreuve = {}
         self.dossards = []
+        self.result_dict = {}
+        self.getter = Getter(url)
 
     def choix_evenement(self):
         """
@@ -107,7 +107,8 @@ class Interface:
         """
             Choix de l'évènement
         """
-        print("Choisissez un évènement :")
+        print("\n#########################\n")
+        print("Choisissez une épreuve :")
         for idx, epreuve in enumerate(self.event_choisi["dataEpreuvesJson"]):
             print(f' - {idx} ({epreuve["nom"]})')
 
@@ -134,25 +135,47 @@ class Interface:
                 break
         return out
 
+    def get_datas(self, filename):
+        self.result_dict = {}
+        with open(filename, 'r', encoding='utf-8', newline='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=";")
+            next(reader)
+            for row in reader:
+                key, value = row
+                self.result_dict[round(float(key))] = round(float(value))
+
+    def send_pointages(self):
+        utc_now = datetime.now(timezone.utc)
+        iso8601_string = utc_now.isoformat()
+        for plaque, points in tqdm(self.result_dict.items()):
+            dossard = self.dossard_by_plaque(plaque)
+
+            content = {
+                "uuidEpreuve": self.epreuve["uuid"],
+                "balise": "",
+                "dossards": dossard["@id"],
+                "evenement": self.event_choisi["@id"],
+                "heureDePointage": iso8601_string,
+                "dataPointageJson": {"points": points}
+            }
+
+            self.getter.do_post("/api/pointages", content)
+            print("\Terminé !\n")
 
     def main(self):
         """
             Lancer l'interface utilisateur
         """
-        print("start")
-        getter = Getter(url)
-        getter.gettoken(os.getenv("UNAME"), os.getenv("PASSWORD"))
+        self.getter.gettoken(os.getenv("UNAME"), os.getenv("PASSWORD"))
         # json.dump(evenements, open("evenements.json", "w", encoding="utf-8"))
 
-        self.evenements = getter.do_get("/api/evenements")
-        # self.evenements = json.load(open("evenements.json", encoding="utf-8"))["member"]
+        self.evenements = self.getter.do_get("/api/evenements")
         self.choix_evenement()
-        print(self.event_choisi)
         self.choix_epreuve()
-        print(self.epreuve)
-        self.dossards = getter.do_get(f"/api/dossards?evenementId={self.event_choisi['id']}")
-        # print(self.dossards)
-        print(self.dossard_by_plaque(34))
+        self.dossards = self.getter.do_get(
+            f"/api/dossards?evenementId={self.event_choisi['id']}")
+        self.get_datas("user/points.csv")
+        self.send_pointages()
 
 
 interface = Interface()
