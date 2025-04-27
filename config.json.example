@@ -1,0 +1,24 @@
+{
+    "questionnaires": [
+        {
+            "name": "Test",
+            "folder": "user/test",
+            "points_total": 100,
+            "n_choix_max": 8,
+            "excl_lines": [3, 6],
+            "excl_cols": [2, 3],
+            "reponses": {
+                "1": "A",
+                "2": "A",
+                "3": "A",
+                "4": "A",
+                "5": "A",
+                "6": "A",
+                "7": "A",
+                "8": "A",
+                "9": "A",
+                "10": "A"
+            }
+        }
+    ]
+}
