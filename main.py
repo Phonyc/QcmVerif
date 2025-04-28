@@ -1,15 +1,23 @@
-from recal import Redresseur
-import os
-from tqdm import tqdm
-import webbrowser
+"""Correction des QCM des épreuves pour les jeunes de la FFVélo
+"""
 import json
-import result_extract
+import os
 import sys
+
 from flask import Flask, render_template, send_file, redirect, request, jsonify
+from tqdm import tqdm
+
+import result_extract
+from recal import Redresseur
+
 IMAGES_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff']
 
-import signal
+
 class Qcm:
+    """
+        Correction d'un questionnaire
+    """
+
     def __init__(self, config):
         self.folder = config["folder"]
         self.name = config["name"]
@@ -22,19 +30,32 @@ class Qcm:
         self.data_extract = {}
         self.replace = False
         self.out_results = {}
-        if (os.path.isfile(f"{self.folder}/result.json")):
+        if os.path.isfile(f"{self.folder}/result.json"):
             self.out_results = json.load(open(f"{self.folder}/result.json"))
-
         self.app = Flask(__name__)
         self.setup_routes()
 
     def setup_routes(self):
+        """
+            Mettre les routes du serveur en place
+        :return:
+        """
+
         @self.app.route('/')
         def home():
+            """
+                Page accueil : renvoyer vers la première image.
+            :return:
+            """
             return redirect(f"/verif/{list(self.data_extract.keys())[0]}")
 
         @self.app.route('/verif/<image_path>', methods=['GET', 'POST'])
         def verif(image_path):
+            """
+                Page de vérification des cases cochées
+            :param image_path:
+            :return:
+            """
             if request.method == 'POST':
                 numplaque = int(request.json["num"])
                 self.out_results[str(numplaque)] = request.json["result"]
@@ -45,6 +66,11 @@ class Qcm:
 
         @self.app.route('/next/<image_path>')
         def next_page(image_path):
+            """
+                Retourner la prochaine image
+            :param image_path:
+            :return:
+            """
             cles = list(self.data_extract.keys())
             try:
                 index_cle_actuelle = cles.index(image_path)
@@ -57,40 +83,52 @@ class Qcm:
 
         @self.app.route('/image/<image_path>')
         def get_image(image_path):
+            """
+                Retourner l'image
+            :param image_path:
+            :return:
+            """
             return send_file(f'{self.folder}/droit/{image_path}')
 
         @self.app.route('/calc')
         def calc():
+            """
+                Lancer le calcul
+            :return:
+            """
             # os.kill(os.getpid(), signal.SIGINT)
-            self.continue_to_calc()
+            print("Calcul des points")
+            self.calcul()
+
             return "OK"
 
     def launch(self):
+        """
+            Fonction principale
+        """
         print(f"*** Correction de : {self.name} ***")
         print("Paramètres :")
         print(" - Points par question :", self.pts_par_question)
         if os.path.exists(f"{self.folder}/data_extract.json"):
             input_ecrase = input(
                 "Des données ont déjà été lues pour ce QCM, les écraser ? (y/N)")
-            if (input_ecrase.strip() in "yY"):
+            if input_ecrase.strip() == "y" or input_ecrase.strip() == "Y":
                 self.replace = True
 
-            if (not self.replace):
+            if not self.replace:
                 self.data_extract = json.load(
-                    (open(f"{self.folder}/data_extract.json", "r", encoding="utf-8")))
+                    (open(f"{self.folder}/data_extract.json", encoding="utf-8")))
         if self.replace:
             self.out_results = {}
         self.extract()
         self.save_extract()
 
         self.app.run(host="127.0.0.1", port=3000)
-    
-    def continue_to_calc(self):
-        print("Calcul des points")
-        self.calcul()
 
     def extract(self):
-        feuilles = []
+        """
+            Extraire les cases cochées
+        """
         for path in tqdm(self.images_paths):
             if not path.startswith('.'):
                 _, extension = os.path.splitext(path)
@@ -101,6 +139,11 @@ class Qcm:
                             except_lines=self.except_lines, except_cols=self.except_cols)
 
     def single_calc_point(self, entrees):
+        """
+            Calculer les points d'une feuille
+        :param entrees:
+        :return:
+        """
         points = 0
         for nk, rep in self.reponses.items():
             n_reps = 0
@@ -114,26 +157,49 @@ class Qcm:
             if n_reps == 1 and add_pt:
                 points += self.pts_par_question
 
-        return points - (points % 5)
+        return points
 
     def calcul(self):
+        """
+            Calcul global des points
+        """
         out = "num plaque;points\n"
         for np, result in self.out_results.items():
             out += f"{np};{self.single_calc_point(result)}\n"
         with open(f"{self.folder}/points.csv", "w", encoding="utf-8") as f:
             print(out)
             f.write(out)
-        print("**Points Calculés ***")        
+        print("**Points Calculés ***")
 
     def save_extract(self):
+        """
+            Sauvegarder les cases extraites
+        """
         json.dump(self.data_extract, open(
             f"{self.folder}/data_extract.json", "w", encoding="utf-8"))
 
     def save_result(self):
+        """
+            Sauvegarder les réponses entrées
+        """
         json.dump(self.out_results, open(
             f"{self.folder}/result.json", "w", encoding="utf-8"))
 
 
-print(json.load(open("config.json"))["questionnaires"][0])
-qcm = Qcm(json.load(open("config.json"))["questionnaires"][0])
+questionnaires = json.load(open("config.json"))["questionnaires"]
+print("\n#########################\n")
+print("Choisissez un questionnaire :")
+for idx, quest in enumerate(questionnaires):
+    print(f' - {idx} ({quest["name"]})')
+
+num_epr_choisi_str = input("\nEntrez le numéro du questionnaire : ")
+
+try:
+    num_epr_choisi = int(num_epr_choisi_str)
+    quest_def = questionnaires[num_epr_choisi]
+except ValueError:
+    print("La valeur n'est pas valide")
+    sys.exit()
+print("")
+qcm = Qcm(quest_def)
 qcm.launch()
