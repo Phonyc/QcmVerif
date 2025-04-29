@@ -1,9 +1,9 @@
-"""Correction des QCM des épreuves pour les jeunes de la FFVélo
-"""
+"""Correction des QCM des épreuves pour les jeunes de la FFVélo"""
 import json
 import os
 import sys
 
+import fitz
 from flask import Flask, render_template, send_file, redirect, request, jsonify
 from tqdm import tqdm
 
@@ -102,6 +102,20 @@ class Qcm:
 
             return "OK"
 
+    def pdf_to_images(self, input_pdf_path):
+        """
+            Extraire les pages d'un pdf vers des images
+        :param input_pdf_path:
+        """
+        pdf_document = fitz.open(input_pdf_path)
+        for page_number in tqdm(range(len(pdf_document))):
+            page = pdf_document[page_number]
+            pix = page.get_pixmap()  # Convertir la page en image
+            output_image_path = f'{self.folder}/input/frompdf_{page_number + 1}.png'  # Nom de l'image
+            pix.save(output_image_path)  # Enregistrer l'image
+
+        pdf_document.close()  # Fermer le document PDF
+
     def launch(self):
         """
             Fonction principale
@@ -111,7 +125,7 @@ class Qcm:
         print(" - Points par question :", self.pts_par_question)
         if os.path.exists(f"{self.folder}/data_extract.json"):
             input_ecrase = input(
-                "Des données ont déjà été lues pour ce QCM, les écraser ? (y/N)")
+                "\nDes données ont déjà été lues pour ce QCM, les écraser ? (y/N)")
             if input_ecrase.strip() == "y" or input_ecrase.strip() == "Y":
                 self.replace = True
 
@@ -129,6 +143,12 @@ class Qcm:
         """
             Extraire les cases cochées
         """
+        print("Préparation...")
+        for path in self.images_paths:
+            if not path.startswith('.') and path.endswith("pdf"):
+                self.pdf_to_images(f'{self.folder}/input/{path}')
+
+        print("Extraction...")
         for path in tqdm(self.images_paths):
             if not path.startswith('.'):
                 _, extension = os.path.splitext(path)

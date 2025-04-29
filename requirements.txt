@@ -4,3 +4,4 @@ Flask
 tqdm
 requests
 python-dotenv
+PyMuPDF
